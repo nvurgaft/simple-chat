@@ -13,6 +13,9 @@ int main(int argc, char* argv[])
     int nbytes;
     char client_name[32];
 
+    printf("Please enter your name:\n");
+    fgets(client_name, 32, stdin);
+
     /** commit socket */
     if (fd = socket(PF_INET, SOCK_STREAM, 0)<0)
     {
@@ -20,20 +23,21 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    srv.sin_family = AF_INET;    //set internet protocol
-    srv.sin_port = htons(DEFAULT_PORT);    //default port
-    //srv.sin_addr.s_addr = inet_addr("128.2.35.50"); // ???
+    cli.sin_family = AF_INET;    //set internet protocol
+    cli.sin_port = htons(DEFAULT_PORT);    //default port
+    //cli.sin_addr.s_addr = inet_addr("128.2.35.50"); // ???
 
     /** connect to server */
-    if(connect(fd, (struct sockaddr*) &srv, sizeof(srv)) < 0)
+    if(connect(fd, (struct sockaddr*) &cli, sizeof(cli)) < 0)
     {
         fprintf(stderr, "error connecting to server.\n");
         exit(1);
     }
 
-    /** if a connection was established send a logic request */
+    /** if a connection was established send a login request */
     login_msg.msg_type = MSG;
     strcpy(login_msg.msg_text, client_name);
+
     if (nbytes = write(newfd, (struct msgbuf*) &login_msg, sizeof(login_msg))<0)
     {
         fprintf(stderr, "error sending login request.\n");
