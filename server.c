@@ -4,15 +4,16 @@
 
 int main(int argc, char* argv[])
 {
-    int sock_fd, new_sock_fd;                  //descriptors
+    int sock_fd, new_sock_fd;       //descriptors
     struct sockaddr_in srv, cli;    //server & client socket address
-    struct msgbuf intro_msg;
+    struct msgbuf intro_msg, msg;
     int port_addr;
     int cli_len = sizeof(cli);      //client length
     int nbytes;
 
     dbllist_t* user_list = (dbllist_t*) malloc(sizeof(dbllist_t)); //a list of all the users in session
     dbllist_init(user_list);
+
     /** create socket */
     sock_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (sock_fd<0)
@@ -20,12 +21,12 @@ int main(int argc, char* argv[])
         fprintf(stderr, "error creating socket.\n");
         exit(1);
     }
-    port_addr = 5000;
+    port_addr = DEFAULT_PORT;
 
     bzero((char*) &srv, sizeof(srv));
-    srv.sin_family = AF_INET;    //set internet protocol
+    srv.sin_family = AF_INET;           //address family internet
     srv.sin_addr.s_addr = INADDR_ANY;
-    srv.sin_port = htons(port_addr);   //port 80
+    srv.sin_port = htons(port_addr);    //port 80
     printf("socket port is %d\n", port_addr);
 
     /** bind socket to a port*/
@@ -44,16 +45,7 @@ int main(int argc, char* argv[])
     }
     printf("listening to incoming connection attempts...\n");
 
-    //pid_t pid=fork();
-    //if (pid<0)
-    //{
-    //    fprintf(stderr, "error forking server to a new user connection.\n");
-    //    exit(1);
-    //}
-
-    /**fork the main process so that a child is actually doing the communication with a client */
-    //if (pid==0)
-    //{
+    /** use threads (+ thread pull) */
 
         while (1) /**standing by for a client */
         {
@@ -63,6 +55,8 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "error accepting client.\n");
                 exit(1);
             }
+
+            pthread_create();
 
             bzero((struct msgbuf*) &intro_msg, sizeof(intro_msg));
 
@@ -76,9 +70,8 @@ int main(int argc, char* argv[])
                 exit(1);
             }
 
-
             /** read from client */
-            /*if (nbytes = read(new_sock_fd, (struct msgbuf*) buff, sizeof(buff))<0)
+            if (nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msgfgets(retry, 2, stdin)))<0)
             {
                 fprintf(stderr, "error reading from client.\n");
                 exit(1);
@@ -88,7 +81,6 @@ int main(int argc, char* argv[])
             close(new_sock_fd);
             close(sock_fd);
         }
-    //}
 
     dbllist_destroy(user_list, 0);
 

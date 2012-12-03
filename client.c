@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
     struct msgbuf msg, login_msg;
     char user_name[32];
     char host_name[128];
-    int port;
+    int port_addr;
     int nbytes;
     char client_name[32];
 
@@ -23,8 +23,10 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    cli.sin_family = AF_INET;    //set internet protocol
-    cli.sin_port = htons(DEFAULT_PORT);    //default port
+    port_addr = DEFAULT_PORT;
+
+    cli.sin_family = AF_INET;           //address family internet
+    cli.sin_port = htons(port_addr);    //default port is 5000
     //cli.sin_addr.s_addr = inet_addr("128.2.35.50"); // ???
 
     /** connect to server */
