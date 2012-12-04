@@ -10,6 +10,7 @@
 #include <string.h>
 #include <pthread.h>
 
+#define MAX_THREADS 64
 #define DEFAULT_PORT 5000
 
 /** types of messages */

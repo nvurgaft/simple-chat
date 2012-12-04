@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
                 exit(1);
             }
 
-            pthread_create();
+            //pthread_create();
 
             bzero((struct msgbuf*) &intro_msg, sizeof(intro_msg));
 
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
             }
 
             /** read from client */
-            if (nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msgfgets(retry, 2, stdin)))<0)
+            if (nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
             {
                 fprintf(stderr, "error reading from client.\n");
                 exit(1);

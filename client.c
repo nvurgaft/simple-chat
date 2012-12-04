@@ -7,11 +7,11 @@ int main(int argc, char* argv[])
     int fd, newfd;                  //descriptors
     struct sockaddr_in cli;         //client socket address
     struct msgbuf msg, login_msg;
-    char user_name[32];
+    char client_name[32];
     char host_name[128];
     int port_addr;
     int nbytes;
-    char client_name[32];
+    char varify[1];
 
     printf("Please enter your name:\n");
     fgets(client_name, 32, stdin);
@@ -30,11 +30,17 @@ int main(int argc, char* argv[])
     //cli.sin_addr.s_addr = inet_addr("128.2.35.50"); // ???
 
     /** connect to server */
-    if(connect(fd, (struct sockaddr*) &cli, sizeof(cli)) < 0)
-    {
-        fprintf(stderr, "error connecting to server.\n");
-        exit(1);
-    }
+    do {
+        if(connect(fd, (struct sockaddr*) &cli, sizeof(cli)) < 0)
+        {
+            fprintf(stderr, "error connecting to server.\nretry? [y/n]\n");
+            scanf("%s", &varify);
+            if (strstr(varify, "n")!=NULL)
+            {
+                exit(1);
+            }
+        }
+    } while (strstr(varify, "y")!=NULL);
 
     /** if a connection was established send a login request */
     login_msg.msg_type = MSG;
@@ -54,18 +60,6 @@ int main(int argc, char* argv[])
             fprintf(stderr, "error reading from client.\n");
             exit(1);
         }
-        else
-        {
-            if (msg.msg_type==MSG)
-            {
-                printf("%s", msg.msg_text);
-                fgets(client_name, 32, stdin);
-            }
-            if (msg.msg_type==CMD)
-            {
-                printf("do something...\n");
-            }
-        }
 
         /** write to server */
         if (nbytes = write(newfd, (struct msgbuf*) &login_msg, sizeof(login_msg))<0)
@@ -73,7 +67,7 @@ int main(int argc, char* argv[])
             fprintf(stderr, "error writting to server.\n");
             exit(1);
         }
-    } while (strcmp("exit\n", msg.msg_text)!=0);
+    } while ((strstr(msg.msg_text, "exit")!=NULL));
 
     /**close connection */
     close(fd);
