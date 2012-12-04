@@ -24,9 +24,9 @@ int main(int argc, char* argv[])
     port_addr = DEFAULT_PORT;
 
     bzero((char*) &srv, sizeof(srv));
-    srv.sin_family = AF_INET;           //address family internet
+    srv.sin_family = AF_INET;                   //address family internet
     srv.sin_addr.s_addr = INADDR_ANY;
-    srv.sin_port = htons(port_addr);    //port 80
+    srv.sin_port = htons(port_addr);            //default port 5000
     printf("socket port is %d\n", port_addr);
 
     /** bind socket to a port*/
@@ -49,26 +49,16 @@ int main(int argc, char* argv[])
 
         while (1) /**standing by for a client */
         {
+            printf("awaiting accept\n");
             /** accept */
             if (new_sock_fd = accept(sock_fd, (struct sockaddr*) &cli, &cli_len)<0)
             {
                 fprintf(stderr, "error accepting client.\n");
                 exit(1);
             }
+            printf("after accept\n");
 
-            //pthread_create();
-
-            bzero((struct msgbuf*) &intro_msg, sizeof(intro_msg));
-
-            intro_msg.msg_type = MSG;
-            strcpy(intro_msg.msg_text, "username already exists, try again\n");
-
-            /** write to client */
-            if (nbytes = write(new_sock_fd, (struct msgbuf*) &intro_msg, sizeof(intro_msg)+1)<0)
-            {
-                fprintf(stderr, "error writting to server.\n");
-                exit(1);
-            }
+            //bzero((struct msgbuf*) &intro_msg, sizeof(intro_msg));
 
             /** read from client */
             if (nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
@@ -76,13 +66,24 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "error reading from client.\n");
                 exit(1);
             }
+            else
+            {
+                printf("%d\n", msg.msg_type);
+                printf("%s\n", msg.msg_text);
+            }
 
-            /** close connections */
-            close(new_sock_fd);
-            close(sock_fd);
+            /** write to client */
+            if (nbytes = write(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg)+1)<0)
+            {
+                fprintf(stderr, "error writting to server.\n");
+                exit(1);
+            }
         }
 
-    dbllist_destroy(user_list, 0);
+    /** close connections */
+    close(new_sock_fd);
+    close(sock_fd);
 
-    return 0;
+    dbllist_destroy(user_list, 0);
+    exit(0);
 }

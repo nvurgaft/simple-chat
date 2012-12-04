@@ -32,6 +32,7 @@ Remarks
 TODO
 ------------
 
-1. finish basic server to client side communication
-2. implement forking for multiple client support
-3. save all clients in a linked list and add log options and properties
+some of the things that should be implemented in the future
+
+1. implement threading for multiple client support
+2. save all clients in a linked list and add log options and properties

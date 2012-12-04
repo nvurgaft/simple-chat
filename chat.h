@@ -1,6 +1,8 @@
+
 #ifndef CHAT_H_
 #define CHAT_H_
 
+/**includes */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,6 +15,8 @@
 #define MAX_THREADS 64
 #define DEFAULT_PORT 5000
 
+typedef enum {TRUE=1, FALSE=0} bool_t;
+
 /** types of messages */
 typedef enum {MSG = 1, CMD = 2} msg_type_t;
 
@@ -21,6 +25,14 @@ struct msgbuf
 {
     int msg_type;
     char msg_text[1024];
+};
+
+/** user struct */
+struct user
+{
+    char name[32];
+    int id;
+    bool_t logged;
 };
 
 #endif
