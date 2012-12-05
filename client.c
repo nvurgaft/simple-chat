@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     login_msg.msg_type = MSG;
     strcpy(login_msg.msg_text, client_name);
 
-    if (write(newfd, (struct msgbuf*) &login_msg, sizeof(login_msg)+1)<0)
+    if (nbytes = write(fd, (struct msgbuf*) &login_msg, sizeof(login_msg)+1)<0)
     {
         fprintf(stderr, "error sending login request.\n");
         exit(1);

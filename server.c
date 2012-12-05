@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "error accepting client.\n");
                 exit(1);
             }
-            printf("after accept\n");
+            printf("after accept, handshake with client successful.\n");
 
             //bzero((struct msgbuf*) &intro_msg, sizeof(intro_msg));
 
