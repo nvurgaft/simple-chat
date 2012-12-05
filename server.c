@@ -58,8 +58,6 @@ int main(int argc, char* argv[])
             }
             printf("after accept, handshake with client successful.\n");
 
-            //bzero((struct msgbuf*) &intro_msg, sizeof(intro_msg));
-
             /** read from client */
             if (nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
             {
@@ -68,7 +66,6 @@ int main(int argc, char* argv[])
             }
             else
             {
-                printf("%d\n", msg.msg_type);
                 printf("%s\n", msg.msg_text);
             }
 
@@ -79,7 +76,6 @@ int main(int argc, char* argv[])
                 exit(1);
             }
         }
-
     /** close connections */
     close(new_sock_fd);
     close(sock_fd);

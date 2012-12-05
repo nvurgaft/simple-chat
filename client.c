@@ -4,7 +4,7 @@
 
 int main(int argc, char* argv[])
 {
-    int fd, newfd;                  //descriptors
+    int fd;                        //descriptors
     struct sockaddr_in serv_addr;         //client socket address
     struct hostent *server;
     struct msgbuf msg, login_msg;
@@ -24,11 +24,9 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    //server = gethostbyname("host");
     port_addr = DEFAULT_PORT;
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;           //address family internet
-    //bcopy((char *)server->h_addr, (char *) &serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(port_addr);    //default port is 5000
 
     /** connect to server */
@@ -62,7 +60,7 @@ int main(int argc, char* argv[])
     {
         /** read from server */
         printf("read from server\n");
-        if (nbytes = read(newfd, (struct msgbuf*) &msg, sizeof(msg))<0)
+        if (nbytes = read(fd, (struct msgbuf*) &msg, sizeof(msg))<0)
         {
             fprintf(stderr, "error reading from client.\n");
             exit(1);
@@ -73,9 +71,9 @@ int main(int argc, char* argv[])
 
         /** write to server */
         printf("write to server server\n");
-        if (nbytes = write(newfd, (struct msgbuf*) &msg, sizeof(msg))<0)
+        if (nbytes = write(fd, (struct msgbuf*) &msg, sizeof(msg))<0)
         {
-            fprintf(stderr, "error writting to server.\n");
+            fprintf(stderr, "error writting to client.\n");
             exit(1);
         }
     }
@@ -83,6 +81,5 @@ int main(int argc, char* argv[])
 
     /**close connection */
     close(fd);
-
     exit(0);
 }
