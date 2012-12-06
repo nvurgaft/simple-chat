@@ -4,8 +4,13 @@
 
 int main(int argc, char* argv[])
 {
+<<<<<<< HEAD
     int fd; //descriptors
     struct sockaddr_in serv_addr; //client socket address
+=======
+    int fd;                        //descriptors
+    struct sockaddr_in serv_addr;         //client socket address
+>>>>>>> 7a8ed1ab76c51486218873e1cccd53b0aa4d0d24
     struct hostent *server;
     struct msgbuf msg, login_msg;
     char client_name[32], host_name[128], input[1024];
@@ -26,8 +31,13 @@ int main(int argc, char* argv[])
 
     port_addr = DEFAULT_PORT;
     bzero((char *) &serv_addr, sizeof(serv_addr));
+<<<<<<< HEAD
     serv_addr.sin_family = AF_INET; //address family internet
     serv_addr.sin_port = htons(port_addr); //default port is 5000
+=======
+    serv_addr.sin_family = AF_INET;           //address family internet
+    serv_addr.sin_port = htons(port_addr);    //default port is 5000
+>>>>>>> 7a8ed1ab76c51486218873e1cccd53b0aa4d0d24
 
     /** connect to server */
     do
