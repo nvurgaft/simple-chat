@@ -4,11 +4,11 @@
 
 int main(int argc, char* argv[])
 {
-    int sock_fd, new_sock_fd;       //descriptors
-    struct sockaddr_in srv, cli;    //server & client socket address
+    int sock_fd, new_sock_fd; //descriptors
+    struct sockaddr_in srv, cli; //server & client socket address
     struct msgbuf intro_msg, msg;
     int port_addr;
-    int cli_len = sizeof(cli);      //client length
+    int cli_len = sizeof(cli); //client length
     int nbytes;
 
     dbllist_t* user_list = (dbllist_t*) malloc(sizeof(dbllist_t)); //a list of all the users in session
@@ -24,9 +24,9 @@ int main(int argc, char* argv[])
     port_addr = DEFAULT_PORT;
 
     bzero((char*) &srv, sizeof(srv));
-    srv.sin_family = AF_INET;                   //address family internet
+    srv.sin_family = AF_INET; //address family internet
     srv.sin_addr.s_addr = INADDR_ANY;
-    srv.sin_port = htons(port_addr);            //default port 5000
+    srv.sin_port = htons(port_addr); //default port 5000
     printf("socket port is %d\n", port_addr);
 
     /** bind socket to a port*/
@@ -56,9 +56,7 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "error accepting client.\n");
                 exit(1);
             }
-            printf("after accept\n");
-
-            //bzero((struct msgbuf*) &intro_msg, sizeof(intro_msg));
+            printf("after accept, handshake with client successful.\n");
 
             /** read from client */
             if (nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
@@ -68,7 +66,6 @@ int main(int argc, char* argv[])
             }
             else
             {
-                printf("%d\n", msg.msg_type);
                 printf("%s\n", msg.msg_text);
             }
 
@@ -79,7 +76,6 @@ int main(int argc, char* argv[])
                 exit(1);
             }
         }
-
     /** close connections */
     close(new_sock_fd);
     close(sock_fd);
