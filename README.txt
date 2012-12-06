@@ -11,6 +11,7 @@ Submitted Files
 
 client.c - the client side for the chat application
 server.c - the server side for the chat application
+chat.h - header file for both client and server
 README - This file, description for this project
 MAKEFILE - compile configuration for this project
 

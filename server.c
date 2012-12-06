@@ -5,7 +5,7 @@
 int main(int argc, char* argv[])
 {
     int sock_fd, new_sock_fd; //descriptors
-    struct sockaddr_in srv, cli; //server & client socket address
+    struct sockaddr_in serv_addr, cli; //server & client socket address
     struct msgbuf intro_msg, msg;
     int port_addr;
     int cli_len = sizeof(cli); //client length
@@ -23,14 +23,14 @@ int main(int argc, char* argv[])
     }
     port_addr = DEFAULT_PORT;
 
-    bzero((char*) &srv, sizeof(srv));
-    srv.sin_family = AF_INET; //address family internet
-    srv.sin_addr.s_addr = INADDR_ANY;
-    srv.sin_port = htons(port_addr); //default port 5000
+    bzero(&serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET; //address family internet
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(port_addr); //default port 5000
     printf("socket port is %d\n", port_addr);
 
     /** bind socket to a port*/
-    if (bind(sock_fd, (struct sockaddr*)&srv, sizeof(srv))<0)
+    if (bind(sock_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))<0)
     {
         fprintf(stderr, "error binding socket.\n");
         exit(1);
@@ -38,48 +38,51 @@ int main(int argc, char* argv[])
     printf("socket bound to port...\n");
 
     /** listen to any incoming connection attempts */
+    printf("listening to incoming connection attempts...\n");
     if (listen(sock_fd, 5)<0)
     {
         fprintf(stderr, "error establishing listening.\n");
         exit(1);
     }
-    printf("listening to incoming connection attempts...\n");
 
-    /** use threads (+ thread pull) */
+    bzero(&msg, sizeof(msg));
+    msg.msg_type = MSG;
+    strcpy(msg.msg_text, "Hello, please enter your username\n");    //login msg
 
-        while (1) /**standing by for a client */
+    // use threads here (try thread pulling)
+
+    do /**standing by for a client */
+    {
+        printf("awaiting accept\n");
+        /** accept */
+        if (new_sock_fd = accept(sock_fd, (struct sockaddr*) &cli, &cli_len)<0)
         {
-            printf("awaiting accept\n");
-            /** accept */
-            if (new_sock_fd = accept(sock_fd, (struct sockaddr*) &cli, &cli_len)<0)
-            {
-                fprintf(stderr, "error accepting client.\n");
-                exit(1);
-            }
-            printf("after accept, handshake with client successful.\n");
-
-            /** read from client */
-            if (nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
-            {
-                fprintf(stderr, "error reading from client.\n");
-                exit(1);
-            }
-            else
-            {
-                printf("%s\n", msg.msg_text);
-            }
-
-            /** write to client */
-            if (nbytes = write(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg)+1)<0)
-            {
-                fprintf(stderr, "error writting to server.\n");
-                exit(1);
-            }
+            fprintf(stderr, "error accepting client.\n");
+            exit(1);
         }
-    /** close connections */
+        printf("after accept, handshake with client successful.\n");
+
+        /** read from client */
+        if (nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
+        {
+            fprintf(stderr, "error reading from client.\n");
+            exit(1);
+        }
+        printf("%s\n", msg.msg_text);
+
+        /** write to client */
+        if (nbytes = write(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
+        {
+            fprintf(stderr, "error writting to client.\n");
+            exit(1);
+        }
+    }
+    while (strcmp(msg.msg_text, "exit\n")!=0);
+    printf("\nclosing server and leaving...\n");
+
+    /** cleaning up */
     close(new_sock_fd);
     close(sock_fd);
-
     dbllist_destroy(user_list, 0);
     exit(0);
 }
