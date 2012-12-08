@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <pthread.h>
+#include <netdb.h>
 
 #define MAX_THREADS 64
 #define DEFAULT_PORT 5000

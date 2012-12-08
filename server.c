@@ -7,6 +7,7 @@ int main(int argc, char* argv[])
     int sock_fd, new_sock_fd; //descriptors
     struct sockaddr_in serv_addr, cli; //server & client socket address
     struct msgbuf intro_msg, msg;
+    char input[1024];
     int port_addr;
     int cli_len = sizeof(cli); //client length
     int nbytes;
@@ -62,20 +63,24 @@ int main(int argc, char* argv[])
         }
         printf("after accept, handshake with client successful.\n");
 
-        /** read from client */
-        if (nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
-        {
-            fprintf(stderr, "error reading from client.\n");
-            exit(1);
-        }
-        printf("%s\n", msg.msg_text);
-
         /** write to client */
-        if (nbytes = write(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
+        nbytes = write(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg));
+        if (nbytes<0)
         {
             fprintf(stderr, "error writting to client.\n");
             exit(1);
         }
+
+        /** read from client */
+        nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg));
+        if (nbytes<0)
+        {
+            fprintf(stderr, "error reading from client.\n");
+            exit(1);
+        }
+        //printf("%s\n", msg.msg_text);
+
+
     }
     while (strcmp(msg.msg_text, "exit\n")!=0);
     printf("\nclosing server and leaving...\n");
