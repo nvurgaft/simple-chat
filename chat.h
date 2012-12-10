@@ -1,4 +1,14 @@
 
+/**
+
+  @file  chat.h
+
+  @brief A header to apply common interface and language between
+        a client and a server .
+
+
+*/
+
 #ifndef CHAT_H_
 #define CHAT_H_
 
@@ -13,6 +23,7 @@
 #include <pthread.h>
 #include <netdb.h>
 
+#define BUFFER_SIZE 1024
 #define MAX_THREADS 64
 
 typedef enum {TRUE=1, FALSE=0} bool_t;
@@ -24,7 +35,7 @@ typedef enum {MSG = 1, CMD = 2} msg_type_t;
 struct msgbuf
 {
     int msg_type;
-    char msg_text[1024];
+    char msg_text[BUFFER_SIZE];
 };
 
 /** user struct */

@@ -28,6 +28,8 @@ server and begins communicating with other clients connected to the server side.
 Remarks
 ------------
 
+The client program can exit if a user types 'exit'
+The server program can also exit if a connected client user types 'kill server' (with a whitespace) 
 
 
 TODO

@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     /** declarations */
     int sockfd, newsockfd, portno;
     socklen_t clilen;
-    char buffer[1024];
+    char buffer[BUFFER_SIZE];
     struct sockaddr_in serv_addr, cli_addr;
     int n;
     bool_t first_post=TRUE, valid_user=FALSE;
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
         error("ERROR on accept");
     }
 
-     while (strcmp(buffer, "exit\n")!=0)
+     while (1)
     {
         if (first_post==TRUE)
         {
@@ -92,7 +92,11 @@ int main(int argc, char *argv[])
                     {
                         if ((char*)current->data==buffer)
                         {
-                            printf("Username already exist, try again\n");
+                            n = write(newsockfd, "Hello, please enter your username\n", sizeof(buffer));
+                            if (n < 0)
+                            {
+                                error("ERROR writing to socket");
+                            }
                             break;
                         }
                         current = current->next;
@@ -102,22 +106,25 @@ int main(int argc, char *argv[])
                     {
                         dbllist_append(user_list, buffer);
                         // confirmation
+                        printf("Username OK\n");
                         n = write(newsockfd, "Username OK\n", sizeof(buffer));
                         if (n < 0)
                         {
                             error("ERROR writing to socket");
                         }
-                        print_user_list(user_list);
+
                         valid_user==TRUE;
                     }
                 }
             }
+            print_user_list(user_list);
             first_post = FALSE;
         }
 
         // write, but the server doesn't need a user to write to client
         //bzero(buffer,sizeof(buffer));
         //fgets(buffer,sizeof(buffer)-1,stdin);
+        if (strstr(buffer, "kill server\n")!=NULL) break;
         n = write(newsockfd, buffer, sizeof(buffer));
         if (n < 0)
         {
@@ -135,6 +142,7 @@ int main(int argc, char *argv[])
     }
 
     /** end program routines */
+    printf("closing server, goodbye!\n");
     close(newsockfd);
     close(sockfd);
     dbllist_destroy(user_list,1);

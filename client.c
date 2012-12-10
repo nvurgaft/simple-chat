@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     int sockfd, portno, n;
     struct sockaddr_in serv_addr;
     struct hostent *server;
-    char buffer[1024];
+    char buffer[BUFFER_SIZE];
 
     // start client
     if (argc < 2)
@@ -33,21 +33,26 @@ int main(int argc, char *argv[])
     if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
     {
         error("ERROR connecting");
-    }// read
-        bzero(buffer,sizeof(buffer));
-        n = read(sockfd,buffer,sizeof(buffer));
-        if (n < 0)
-        {
-            error("ERROR reading from socket");
-        }
-        printf("%s\n",buffer);
+    }
 
-    while (strcmp(buffer, "exit\n")!=0)
+    // send user name
+    bzero(buffer,sizeof(buffer));
+    n = read(sockfd,buffer,sizeof(buffer));
+    if (n < 0)
+    {
+        error("ERROR reading from socket");
+    }
+    printf("%s\n",buffer);
+
+    while (1)
     {
         printf("input: ");
         // write
         bzero(buffer,sizeof(buffer));
         fgets(buffer,sizeof(buffer)-1,stdin);
+
+        // if the user types 'exit' the loop will break
+        if (strstr(buffer, "exit\n")!=NULL) break;
         n = write(sockfd,buffer,strlen(buffer));
         if (n < 0)
         {
@@ -65,6 +70,7 @@ int main(int argc, char *argv[])
     }
 
     // end program routines
+    printf("closing client, goodbye!\n");
     close(sockfd);
     return 0;
 }
