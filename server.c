@@ -1,4 +1,4 @@
-/** server */
+/** server side */
 
 #include "chat.h"
 #include "dbllist.c"
@@ -9,12 +9,13 @@ void error(const char *msg);
 
 int main(int argc, char *argv[])
 {
+    /** declarations */
     int sockfd, newsockfd, portno;
     socklen_t clilen;
     char buffer[1024];
     struct sockaddr_in serv_addr, cli_addr;
     int n;
-    bool_t first_post=TRUE;
+    bool_t first_post=TRUE, valid_user=FALSE;
     //pthread_t threads[1000];
     //int rc, t;
 
@@ -22,6 +23,7 @@ int main(int argc, char *argv[])
     dbllist_t* user_list = (dbllist_t*) malloc(sizeof(dbllist_t));
     dbllist_init(user_list);
 
+    /** start server */
     if (argc < 2)
     {
         fprintf(stderr,"ERROR no port provided [command format: ./server <port number>]");
@@ -54,11 +56,11 @@ int main(int argc, char *argv[])
         error("ERROR on accept");
     }
 
-     while (strcmp(buffer, "exit\n")!=0);
+     while (strcmp(buffer, "exit\n")!=0)
     {
-        if (first_post)
+        if (first_post==TRUE)
         {
-            /** write, asks client for user name */
+            // write, asks client for user name
             //bzero(buffer,sizeof(buffer));
             n = write(newsockfd, "Hello, please enter your username\n", sizeof(buffer));
             if (n < 0)
@@ -66,7 +68,7 @@ int main(int argc, char *argv[])
                 error("ERROR writing to socket");
             }
 
-            /** read, logs user name*/
+            // read, logs user name
             bzero(buffer,sizeof(buffer));
             n = read(newsockfd, buffer, sizeof(buffer));
             if (n < 0)
@@ -75,7 +77,7 @@ int main(int argc, char *argv[])
             }
             printf("user name is: %s\n",buffer);
 
-            ///--- traverse user list to see if user exists ---///
+            // use list to find out if user name already exists
             dbllist_node_t* current = user_list->head;
             if (user_list->head==NULL)
             {
@@ -83,35 +85,46 @@ int main(int argc, char *argv[])
             }
             else
             {
-                while (current!=NULL)
+                while (valid_user==FALSE)
                 {
-                    if ((char*)current->data==buffer)
+                    //traverse the list to see if the user name already exists
+                    while (current!=NULL)
                     {
-                        printf("Username already exist, try again\n");
-                        break;
+                        if ((char*)current->data==buffer)
+                        {
+                            printf("Username already exist, try again\n");
+                            break;
+                        }
+                        current = current->next;
                     }
-                    current = current->next;
+                    //if the list was traversed and the user name not found ...
+                    if (current==NULL)
+                    {
+                        dbllist_append(user_list, buffer);
+                        // confirmation
+                        n = write(newsockfd, "Username OK\n", sizeof(buffer));
+                        if (n < 0)
+                        {
+                            error("ERROR writing to socket");
+                        }
+                        print_user_list(user_list);
+                        valid_user==TRUE;
+                    }
                 }
             }
-            ///------------------------------------------------///
-
-            dbllist_append(user_list, buffer);
-
-            /** confirmation */
-            if (TRUE)
-            {
-                n = write(newsockfd, "Username OK\n", sizeof(buffer));
-                if (n < 0)
-                {
-                    error("ERROR writing to socket");
-                }
-
-                first_post = FALSE;
-            }
+            first_post = FALSE;
         }
 
+        // write, but the server doesn't need a user to write to client
+        //bzero(buffer,sizeof(buffer));
+        //fgets(buffer,sizeof(buffer)-1,stdin);
+        n = write(newsockfd, buffer, sizeof(buffer));
+        if (n < 0)
+        {
+            error("ERROR writing to socket");
+        }
 
-        /** read */
+        // read
         bzero(buffer,sizeof(buffer));
         n = read(newsockfd, buffer, sizeof(buffer));
         if (n < 0)
@@ -119,48 +132,40 @@ int main(int argc, char *argv[])
             error("ERROR reading from socket");
         }
         printf("Message received: %s\n",buffer);
-
-        /** write */
-        bzero(buffer,sizeof(buffer));
-        n = write(newsockfd, buffer, sizeof(buffer));
-        if (n < 0)
-        {
-            error("ERROR writing to socket");
-        }
     }
+
+    /** end program routines */
     close(newsockfd);
     close(sockfd);
     dbllist_destroy(user_list,1);
     return 0;
 }
 
-void* func(void* buffer)
-{
+void* func(void* buffer) {
 
     pthread_exit(NULL);
 }
 
-void print_user_list(dbllist_t* list)
-{
+void print_user_list(dbllist_t* list) {
     if (list->head==NULL)
     {
         printf("nothing to print, no users are logged in\n");
     }
     else
     {
+        int i=1;
         dbllist_node_t* current = list->head;
-        printf("printing users list:\n");
-        printf("====================\n");
+        printf("Online users:\n");
         while (current!=NULL)
         {
-            printf("%s", (char*) current->data);
+            printf("%d. %s", i, (char*) current->data);
             current = current->next;
+            i++;
         }
     }
 }
 
-void error(const char *msg)
-{
+void error(const char *msg) {
     perror(msg);
     exit(1);
 }
