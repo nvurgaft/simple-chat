@@ -24,7 +24,7 @@
 #include <netdb.h>
 
 #define BUFFER_SIZE 1024
-#define MAX_THREADS 64
+#define THREADS_MAX 64
 
 typedef enum {TRUE=1, FALSE=0} bool_t;
 

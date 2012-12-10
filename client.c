@@ -77,5 +77,5 @@ int main(int argc, char *argv[])
 
 void error(const char *msg) {
     perror(msg);
-    exit(0);
+    exit(1);
 }

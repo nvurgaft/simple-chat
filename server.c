@@ -3,21 +3,20 @@
 #include "chat.h"
 #include "dbllist.c"
 
-void *func(void* buffer);
+void *client_thread(void* buffer);
 void print_user_list(dbllist_t* list);
 void error(const char *msg);
+
+int sockfd, newsockfd[THREADS_MAX];
 
 int main(int argc, char *argv[])
 {
     /** declarations */
-    int sockfd, newsockfd, portno;
+    int portno, n, tc=0;;
     socklen_t clilen;
     char buffer[BUFFER_SIZE];
     struct sockaddr_in serv_addr, cli_addr;
-    int n;
-    bool_t first_post=TRUE, valid_user=FALSE;
-    //pthread_t threads[1000];
-    //int rc, t;
+    pthread_t threads[THREADS_MAX];
 
     //a list of all the users in session
     dbllist_t* user_list = (dbllist_t*) malloc(sizeof(dbllist_t));
@@ -26,8 +25,7 @@ int main(int argc, char *argv[])
     /** start server */
     if (argc < 2)
     {
-        fprintf(stderr,"ERROR no port provided [command format: ./server <port number>]");
-        exit(1);
+        error("ERROR no port provided [command format: ./server <port number>]");
     }
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -46,86 +44,96 @@ int main(int argc, char *argv[])
     {
         error("ERROR on binding");
     }
-
     listen(sockfd,5);
-    clilen = sizeof(cli_addr);
 
-    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-    if (newsockfd < 0)
-    {
-        error("ERROR on accept");
-    }
+    /** great fun with threads ahead */
 
-     while (1)
+    while (tc<THREADS_MAX)
     {
-        if (first_post==TRUE)
+        clilen = sizeof(cli_addr);
+        newsockfd[tc] = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        if (newsockfd[tc] < 0) error("ERROR on accept");
+
+        n = write(newsockfd[tc], "Hello, please enter your username\n", sizeof(buffer));
+        if (n < 0) error("ERROR writing to socket");
+
+        // read, logs user name
+        bzero(buffer,sizeof(buffer));
+        n = read(newsockfd[tc], buffer, sizeof(buffer));
+        if (n < 0) error("ERROR reading from socket");
+
+        printf("user name is: %s\n",buffer);
+
+        // use list to find out if user name already exists
+        dbllist_node_t* current = user_list->head;
+        if (user_list->head==NULL) dbllist_append(user_list, buffer);
+        else
         {
-            // write, asks client for user name
-            //bzero(buffer,sizeof(buffer));
-            n = write(newsockfd, "Hello, please enter your username\n", sizeof(buffer));
-            if (n < 0)
+            while (1)
             {
-                error("ERROR writing to socket");
-            }
-
-            // read, logs user name
-            bzero(buffer,sizeof(buffer));
-            n = read(newsockfd, buffer, sizeof(buffer));
-            if (n < 0)
-            {
-                error("ERROR reading from socket");
-            }
-            printf("user name is: %s\n",buffer);
-
-            // use list to find out if user name already exists
-            dbllist_node_t* current = user_list->head;
-            if (user_list->head==NULL)
-            {
-                dbllist_append(user_list, buffer);
-            }
-            else
-            {
-                while (valid_user==FALSE)
+                //traverse the list to see if the user name already exists
+                while (current!=NULL)
                 {
-                    //traverse the list to see if the user name already exists
-                    while (current!=NULL)
+                    if ((char*)current->data==buffer)
                     {
-                        if ((char*)current->data==buffer)
-                        {
-                            n = write(newsockfd, "Hello, please enter your username\n", sizeof(buffer));
-                            if (n < 0)
-                            {
-                                error("ERROR writing to socket");
-                            }
-                            break;
-                        }
-                        current = current->next;
+                        n = write(newsockfd[tc], "Username already exists, try again\n", sizeof(buffer));
+                        if (n < 0) error("ERROR writing to socket");
+                        break;
                     }
-                    //if the list was traversed and the user name not found ...
-                    if (current==NULL)
-                    {
-                        dbllist_append(user_list, buffer);
-                        // confirmation
-                        printf("Username OK\n");
-                        n = write(newsockfd, "Username OK\n", sizeof(buffer));
-                        if (n < 0)
-                        {
-                            error("ERROR writing to socket");
-                        }
+                    current = current->next;
+                }
+                //if the list was traversed and the user name not found ...
+                if (current==NULL)
+                {
+                    dbllist_append(user_list, buffer);
+                    // confirmation
+                    printf("Username OK\n");
 
-                        valid_user==TRUE;
-                    }
+                    n = write(newsockfd[tc], "Username OK\n", sizeof(buffer));
+                    if (n < 0) error("ERROR writing to socket");
+                    break;
                 }
             }
-            print_user_list(user_list);
-            first_post = FALSE;
         }
+        pthread_create(&threads[tc], NULL, client_thread, &tc);
+        tc++;
+    }
 
-        // write, but the server doesn't need a user to write to client
-        //bzero(buffer,sizeof(buffer));
-        //fgets(buffer,sizeof(buffer)-1,stdin);
-        if (strstr(buffer, "kill server\n")!=NULL) break;
-        n = write(newsockfd, buffer, sizeof(buffer));
+    /** ----------------------- */
+
+    for (tc=0; tc<THREADS_MAX; tc++)
+    {
+        pthread_join (threads[tc], NULL);
+    }
+
+    /** end program routines */
+    for (tc=0; tc<THREADS_MAX; tc++)
+    {
+        close(newsockfd[tc]);
+    }
+
+    close(sockfd);
+    // changing the 0 to 1 will cause a world of pain
+    dbllist_destroy(user_list, 0);
+    printf("closing server, goodbye!\n");
+
+    return 0;
+}
+
+void* client_thread(void* userc)
+{
+    int user_c = *(int*) userc;
+
+    char buffer[BUFFER_SIZE];
+    int n;
+
+    while (1)
+    {
+        // write, but the server doesn't need the user to write directly to client
+        // bzero(buffer,sizeof(buffer));
+        // fgets(buffer,sizeof(buffer)-1,stdin);
+        if (strstr(buffer, "exit\n")!=NULL) break;
+        n = write(newsockfd[user_c], buffer, sizeof(buffer));
         if (n < 0)
         {
             error("ERROR writing to socket");
@@ -133,23 +141,13 @@ int main(int argc, char *argv[])
 
         // read
         bzero(buffer,sizeof(buffer));
-        n = read(newsockfd, buffer, sizeof(buffer));
+        n = read(newsockfd[user_c], buffer, sizeof(buffer));
         if (n < 0)
         {
             error("ERROR reading from socket");
         }
         printf("Message received: %s\n",buffer);
     }
-
-    /** end program routines */
-    printf("closing server, goodbye!\n");
-    close(newsockfd);
-    close(sockfd);
-    dbllist_destroy(user_list,1);
-    return 0;
-}
-
-void* func(void* buffer) {
 
     pthread_exit(NULL);
 }
