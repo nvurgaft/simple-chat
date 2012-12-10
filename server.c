@@ -1,93 +1,166 @@
+/** server */
 
 #include "chat.h"
 #include "dbllist.c"
 
-int main(int argc, char* argv[])
-{
-    int sock_fd, new_sock_fd; //descriptors
-    struct sockaddr_in serv_addr, cli; //server & client socket address
-    struct msgbuf intro_msg, msg;
-    char input[1024];
-    int port_addr;
-    int cli_len = sizeof(cli); //client length
-    int nbytes;
+void *func(void* buffer);
+void print_user_list(dbllist_t* list);
+void error(const char *msg);
 
-    dbllist_t* user_list = (dbllist_t*) malloc(sizeof(dbllist_t)); //a list of all the users in session
+int main(int argc, char *argv[])
+{
+    int sockfd, newsockfd, portno;
+    socklen_t clilen;
+    char buffer[1024];
+    struct sockaddr_in serv_addr, cli_addr;
+    int n;
+    bool_t first_post=TRUE;
+    //pthread_t threads[1000];
+    //int rc, t;
+
+    //a list of all the users in session
+    dbllist_t* user_list = (dbllist_t*) malloc(sizeof(dbllist_t));
     dbllist_init(user_list);
 
-    /** create socket */
-    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock_fd<0)
+    if (argc < 2)
     {
-        fprintf(stderr, "error creating socket.\n");
+        fprintf(stderr,"ERROR no port provided [command format: ./server <port number>]");
         exit(1);
     }
-    port_addr = DEFAULT_PORT;
 
-    bzero(&serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET; //address family internet
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    {
+        error("ERROR opening socket");
+    }
+
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    portno = atoi(argv[1]);
+    serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(port_addr); //default port 5000
-    printf("socket port is %d\n", port_addr);
+    serv_addr.sin_port = htons(portno);
 
-    /** bind socket to a port*/
-    if (bind(sock_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))<0)
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
     {
-        fprintf(stderr, "error binding socket.\n");
-        exit(1);
-    }
-    printf("socket bound to port...\n");
-
-    /** listen to any incoming connection attempts */
-    printf("listening to incoming connection attempts...\n");
-    if (listen(sock_fd, 5)<0)
-    {
-        fprintf(stderr, "error establishing listening.\n");
-        exit(1);
+        error("ERROR on binding");
     }
 
-    bzero(&msg, sizeof(msg));
-    msg.msg_type = MSG;
-    strcpy(msg.msg_text, "Hello, please enter your username\n");    //login msg
+    listen(sockfd,5);
+    clilen = sizeof(cli_addr);
 
-    // use threads here (try thread pulling)
-
-    do /**standing by for a client */
+    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    if (newsockfd < 0)
     {
-        printf("awaiting accept\n");
-        /** accept */
-        if (new_sock_fd = accept(sock_fd, (struct sockaddr*) &cli, &cli_len)<0)
-        {
-            fprintf(stderr, "error accepting client.\n");
-            exit(1);
-        }
-        printf("after accept, handshake with client successful.\n");
-
-        /** write to client */
-        nbytes = write(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg));
-        if (nbytes<0)
-        {
-            fprintf(stderr, "error writting to client.\n");
-            exit(1);
-        }
-
-        /** read from client */
-        nbytes = read(new_sock_fd, (struct msgbuf*) &msg, sizeof(msg));
-        if (nbytes<0)
-        {
-            fprintf(stderr, "error reading from client.\n");
-            exit(1);
-        }
-        //printf("%s\n", msg.msg_text);
-
-
+        error("ERROR on accept");
     }
-    while (strcmp(msg.msg_text, "exit\n")!=0);
-    printf("\nclosing server and leaving...\n");
 
-    /** cleaning up */
-    close(new_sock_fd);
-    close(sock_fd);
-    dbllist_destroy(user_list, 0);
-    exit(0);
+     while (strcmp(buffer, "exit\n")!=0);
+    {
+        if (first_post)
+        {
+            /** write, asks client for user name */
+            //bzero(buffer,sizeof(buffer));
+            n = write(newsockfd, "Hello, please enter your username\n", sizeof(buffer));
+            if (n < 0)
+            {
+                error("ERROR writing to socket");
+            }
+
+            /** read, logs user name*/
+            bzero(buffer,sizeof(buffer));
+            n = read(newsockfd, buffer, sizeof(buffer));
+            if (n < 0)
+            {
+                error("ERROR reading from socket");
+            }
+            printf("user name is: %s\n",buffer);
+
+            ///--- traverse user list to see if user exists ---///
+            dbllist_node_t* current = user_list->head;
+            if (user_list->head==NULL)
+            {
+                dbllist_append(user_list, buffer);
+            }
+            else
+            {
+                while (current!=NULL)
+                {
+                    if ((char*)current->data==buffer)
+                    {
+                        printf("Username already exist, try again\n");
+                        break;
+                    }
+                    current = current->next;
+                }
+            }
+            ///------------------------------------------------///
+
+            dbllist_append(user_list, buffer);
+
+            /** confirmation */
+            if (TRUE)
+            {
+                n = write(newsockfd, "Username OK\n", sizeof(buffer));
+                if (n < 0)
+                {
+                    error("ERROR writing to socket");
+                }
+
+                first_post = FALSE;
+            }
+        }
+
+
+        /** read */
+        bzero(buffer,sizeof(buffer));
+        n = read(newsockfd, buffer, sizeof(buffer));
+        if (n < 0)
+        {
+            error("ERROR reading from socket");
+        }
+        printf("Message received: %s\n",buffer);
+
+        /** write */
+        bzero(buffer,sizeof(buffer));
+        n = write(newsockfd, buffer, sizeof(buffer));
+        if (n < 0)
+        {
+            error("ERROR writing to socket");
+        }
+    }
+    close(newsockfd);
+    close(sockfd);
+    dbllist_destroy(user_list,1);
+    return 0;
+}
+
+void* func(void* buffer)
+{
+
+    pthread_exit(NULL);
+}
+
+void print_user_list(dbllist_t* list)
+{
+    if (list->head==NULL)
+    {
+        printf("nothing to print, no users are logged in\n");
+    }
+    else
+    {
+        dbllist_node_t* current = list->head;
+        printf("printing users list:\n");
+        printf("====================\n");
+        while (current!=NULL)
+        {
+            printf("%s", (char*) current->data);
+            current = current->next;
+        }
+    }
+}
+
+void error(const char *msg)
+{
+    perror(msg);
+    exit(1);
 }

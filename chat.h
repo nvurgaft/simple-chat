@@ -14,7 +14,6 @@
 #include <netdb.h>
 
 #define MAX_THREADS 64
-#define DEFAULT_PORT 5000
 
 typedef enum {TRUE=1, FALSE=0} bool_t;
 

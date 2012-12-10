@@ -1,87 +1,67 @@
+/** client */
 
 #include "chat.h"
 #include "dbllist.c"
 
-int main(int argc, char* argv[])
+void error(const char *msg);
+
+int main(int argc, char *argv[])
 {
-    int sock_fd;
-    struct sockaddr_in serv_addr;         //client socket address
-    struct msgbuf msg, login_msg;
-    char client_name[32], host_name[128], input[1024];
+    int sockfd, portno, n;
+    struct sockaddr_in serv_addr;
     struct hostent *server;
-    int port_addr;
-    int nbytes;
-    char varify[1];
+    bool_t first_post=TRUE;
 
-    /** create socket */
-    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock_fd<0)
+    char buffer[1024];
+    if (argc < 2)
     {
-        fprintf(stderr, "error creating socket.\n");
-        exit(1);
+       error("ERROR no port provided [command format: ./client <port number>]");
+    }
+    portno = atoi(argv[1]);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    {
+        error("ERROR opening socket");
     }
 
-    port_addr = DEFAULT_PORT;
-    bzero(&serv_addr, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;           //address family internet
-    //bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(port_addr);    //default port is 5000
+    serv_addr.sin_port = htons(portno);
 
-    /** connect to server */
-    do
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
     {
-        if(connect(sock_fd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) < 0)
-        {
-            fprintf(stderr, "error connecting to server.\nretry? [y/n]\n");
-            scanf("%s", &varify);
-            if (strstr(varify, "n")!=NULL)
-            {
-                printf("\nleaving...\n");
-                exit(1);
-            }
-        }
+        error("ERROR connecting");
     }
-    while (strstr(varify, "y")!=NULL);
-    printf("\nconnection established to server. type 'exit' to quit\n");
-
-    /** if a connection was established send a login request */
-    login_msg.msg_type = MSG;
-    strcpy(login_msg.msg_text, client_name);
-
-    if (nbytes = write(sock_fd, (struct msgbuf*) &login_msg, sizeof(login_msg)+1)<0)
+    while (strcmp(buffer, "exit\n")!=0)
     {
-        fprintf(stderr, "error sending name to server.\n");
-        exit(1);
+
+        printf("input: ");
+        /** write */
+        bzero(buffer,sizeof(buffer));
+        fgets(buffer,sizeof(buffer)-1,stdin);
+        n = write(sockfd,buffer,strlen(buffer));
+        if (n < 0)
+        {
+            error("ERROR writing to socket");
+        }
+
+        /** read */
+        //bzero(buffer,sizeof(buffer));
+        n = read(sockfd,buffer,sizeof(buffer));
+        if (n < 0)
+        {
+            error("ERROR reading from socket");
+        }
+        printf("%s\n",buffer);
     }
 
-    do
-    {
-        /** read from server */
-        printf("read from server\n");
-        if (nbytes = read(sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
-        {
-            fprintf(stderr, "error reading from server.\n");
-            exit(1);
-        }
-        printf("%s\n", msg.msg_text);
+    close(sockfd);
+    return 0;
+}
 
-        //write stuff (find better method, buffer is still cluttered)
-        //fgets(input, 1024, stdin);
-        //strcpy(msg.msg_text, input);
-
-        /** write to server */
-        printf("write to server\n");
-        if (nbytes = write(sock_fd, (struct msgbuf*) &msg, sizeof(msg))<0)
-        {
-            fprintf(stderr, "error writting to server.\n");
-            exit(1);
-        }
-    }
-    while (strcmp(msg.msg_text, "exit\n")!=0);
-    printf("\nclosing client and leaving...\n");
-
-    /**cleaning up */
-    close(sock_fd);
+void error(const char *msg)
+{
+    perror(msg);
     exit(0);
 }
