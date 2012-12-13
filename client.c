@@ -1,7 +1,6 @@
 /** client side */
 
 #include "chat.h"
-#include "dbllist.c"
 
 void error(const char *msg);
 
@@ -51,9 +50,9 @@ int main(int argc, char *argv[])
         bzero(buffer,sizeof(buffer));
         fgets(buffer,sizeof(buffer)-1,stdin);
 
-        // if the user types 'exit' the loop will break
+        // if the user types 'exit' the loop will break and the client will exit
         if (strstr(buffer, "exit\n")!=NULL) break;
-        n = write(sockfd,buffer,strlen(buffer));
+        n = write(sockfd,buffer,sizeof(buffer));
         if (n < 0)
         {
             error("ERROR writing to socket");
@@ -68,7 +67,6 @@ int main(int argc, char *argv[])
         }
         printf("%s\n",buffer);
     }
-
     // end program routines
     printf("closing client, goodbye!\n");
     close(sockfd);
