@@ -13,59 +13,35 @@ int main(int argc, char *argv[])
     char buffer[BUFFER_SIZE];
 
     // start client
-    if (argc < 2)
-    {
-       error("ERROR no port provided [command format: ./client <port number>]");
-    }
+    if (argc < 2) error("ERROR no port provided [command format: ./client <port number>]");
     portno = atoi(argv[1]);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
-    {
-        error("ERROR opening socket");
-    }
+    if (sockfd < 0) error("ERROR opening socket");
 
     bzero((char *) &serv_addr, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
 
-    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0)
-    {
-        error("ERROR connecting");
-    }
-
-    // send user name
-    bzero(buffer,sizeof(buffer));
-    n = read(sockfd,buffer,sizeof(buffer));
-    if (n < 0)
-    {
-        error("ERROR reading from socket");
-    }
-    printf("%s\n",buffer);
+    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) error("ERROR connecting");
 
     while (1)
     {
-        printf("input: ");
+        // read
+        bzero(buffer,sizeof(buffer));
+        n = read(sockfd,buffer,sizeof(buffer));
+        if (n < 0) error("ERROR reading from socket");
+        printf("%s\n",buffer);
+
         // write
+        printf("input: ");
         bzero(buffer,sizeof(buffer));
         fgets(buffer,sizeof(buffer)-1,stdin);
 
         // if the user types 'exit' the loop will break and the client will exit
         if (strstr(buffer, "exit\n")!=NULL) break;
         n = write(sockfd,buffer,sizeof(buffer));
-        if (n < 0)
-        {
-            error("ERROR writing to socket");
-        }
-
-        // read
-        bzero(buffer,sizeof(buffer));
-        n = read(sockfd,buffer,sizeof(buffer));
-        if (n < 0)
-        {
-            error("ERROR reading from socket");
-        }
-        printf("%s\n",buffer);
+        if (n < 0) error("ERROR writing to socket");
     }
     // end program routines
     printf("closing client, goodbye!\n");

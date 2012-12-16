@@ -6,33 +6,32 @@ void *client_thread(void* buffer);
 void print_user_list(dbllist_t* list);
 void error(const char *msg);
 
-int sockfd, newsockfd[THREADS_MAX];
 pthread_mutex_t mutex;
 char buffer[BUFFER_SIZE];
+user_t user[THREADS_MAX];
 
 int main(int argc, char *argv[])
 {
-    /** declarations */
-    int portno, n, tc=0;;
+    //check argv validity
+    if (argc < 2) error("ERROR no port provided [command format: ./server <port number>]");
+
+    /// declarations
+    int portno, n, sockfd, tc=0;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     pthread_t threads[THREADS_MAX];
 
-    //a list of all the users in session
+    /// users connected to the server
     dbllist_t* user_list = (dbllist_t*) malloc(sizeof(dbllist_t));
     dbllist_init(user_list);
 
-    /** start server */
-    if (argc < 2)
-    {
-        error("ERROR no port provided [command format: ./server <port number>]");
-    }
+    /// make temp list of the users the client is requesting connection to
+    dbllist_t* res_list = (dbllist_t*) malloc(sizeof(dbllist_t));
+    dbllist_init(res_list);
 
+    /// start main server routines
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
-    {
-        error("ERROR opening socket");
-    }
+    if (sockfd < 0) error("ERROR opening socket");
 
     bzero((char *) &serv_addr, sizeof(serv_addr));
     portno = atoi(argv[1]);
@@ -40,127 +39,152 @@ int main(int argc, char *argv[])
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
 
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-    {
-        error("ERROR on binding");
-    }
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) error("ERROR on binding");
     listen(sockfd,5);
 
-    /** great fun with threads ahead */
+    /// This is where we start to thread out the different clients to be connected to the server
+    if (pthread_mutex_init(&mutex, NULL)!=0) error("ERROR failed to init mutex");
 
-    if (pthread_mutex_init(&mutex, NULL)!=0)
-    {
-        error("ERROR failed to init mutex");
-    }
+    dbllist_node_t* current = user_list->head;
+    dbllist_node_t* rcurrent;
+    // the server is always on line and may also act as a recepient
+    dbllist_append(user_list, "server\n");
 
     while (tc<THREADS_MAX)
     {
-        int i=0;
-        char buffer2[2048];
-        bzero(buffer2, sizeof(buffer2));
+        char buffer2[1024];
+        char user_buffer[1024];
+        bzero(buffer2,sizeof(buffer2));
 
         clilen = sizeof(cli_addr);
-        newsockfd[tc] = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        if (newsockfd[tc] < 0) error("ERROR on accept");
+        user[tc].sockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        if (user[tc].sockfd < 0) error("ERROR on accept");
 
         bzero(buffer,sizeof(buffer));
-        n = write(newsockfd[tc], "Hello, please enter your username\n", sizeof(buffer));
+        n = write(user[tc].sockfd, "Hello, please enter your username\n", sizeof(buffer));
         if (n < 0) error("ERROR writing to socket");
 
-        // read, logs user name
-        bzero(buffer,sizeof(buffer));
-        n = read(newsockfd[tc], buffer, sizeof(buffer));
+        /// read, logs user name
+        bzero(user_buffer,sizeof(user_buffer));
+        n = read(user[tc].sockfd, user_buffer, sizeof(buffer));
         if (n < 0) error("ERROR reading from socket");
 
-        printf("user name is: %s\n",buffer);
+        strcpy(user[tc].name, user_buffer);
 
-        // use list to find out if user name already exists
-        dbllist_node_t* current = user_list->head;
+        printf("a new client has just connected: %s\n",buffer);
 
-        // if list is empty then the first user name is always a valid one
-        if (user_list->size==0)
-        {
-            dbllist_prepend(user_list, buffer);
-            dbllist_node_t* current = user_list->head;
-
-            strcpy(buffer2, "Username OK\nWho do you want to talk to? Write usernames seperated by ;\n");
-            strcat(buffer2, "Online users:\n");
-            while (current!=NULL)
-            {
-                strncat(buffer2, (char*) current->data, 32);
-                current = current->next;
-            }
-            n = write(newsockfd[tc], buffer2, sizeof(buffer));
-            if (n < 0) error("ERROR writing to socket");
-            print_user_list(user_list);
-        }
-        else
-        {
-            while (1)
-            {
-                //traverse the list to see if the user name already exists
-                while (current!=NULL)
-                {
-                    if ((char*)current->data==buffer)
-                    {
-                        n = write(newsockfd[tc], "Username already exists, try again\n", sizeof(buffer));
-                        if (n < 0) error("ERROR writing to socket");
-                        break;
-                    }
-                    current = current->next;
-                }
-                //if the list was traversed and the user name not found ...
-                if (current==NULL)
-                {
-                    dbllist_prepend(user_list, buffer);
-                    dbllist_node_t* current = user_list->head;
-
-                    strcpy(buffer2, "Username OK\nWho do you want to talk to? Write usernames seperated by ;\n");
-                    strcat(buffer2, "Online users:\n");
-                    while (current!=NULL)
-                    {
-                        strncat(buffer2, (char*) current->data, 32);
-                        current = current->next;
-                    }
-                    n = write(newsockfd[tc], buffer2, sizeof(buffer));
-                    if (n < 0) error("ERROR writing to socket");
-                    break;
-                }
-            }
-        }
-        /// read the name of the recepient client
-
-        bzero(buffer,sizeof(buffer));
-        n = read(newsockfd[tc], buffer, sizeof(buffer));
-        if (n < 0) error("ERROR reading from socket");
-
-        /// find the recepient client
+        /// traverse the list to see if the user name already exists
         current = user_list->head;
         while (current!=NULL)
         {
-            if ((char*)current->data==buffer)
+            if (memcmp(current->data, user_buffer, sizeof(current->data))==0)
             {
-                n = write(newsockfd[tc], "\nConnection established, you can start chatting.\n", sizeof(buffer));
+                bzero(buffer,sizeof(buffer));
+                n = write(user[tc].sockfd, "Username already exists, try again\n", sizeof(buffer));
                 if (n < 0) error("ERROR writing to socket");
+
+                while (memcmp(current->data, user_buffer, sizeof(current->data))==0) 
+                {
+                    n = read(user[tc].sockfd, user_buffer, sizeof(buffer));
+                    if (n < 0) error("ERROR reading from socket");
+
+                    bzero(buffer,sizeof(buffer));
+                    n = write(user[tc].sockfd, "Username already exists, try again\n", sizeof(buffer));
+                    if (n < 0) error("ERROR writing to socket");
+                
+                }
                 break;
             }
             current = current->next;
         }
+        //if the list was traversed and the user name not found or the list was empty to begin with
         if (current==NULL)
         {
-            n = write(newsockfd[tc], "\nUser not listed!\n", sizeof(buffer));
+            dbllist_append(user_list, (void*) &user[tc]);
+            current = user_list->head;
+
+            bzero(buffer,sizeof(buffer));
+            strcpy(buffer2, "Username OK\nWho do you want to talk to? Write usernames seperated by ;\nOnline users:\n");
+            while (current!=NULL)
+            {
+                strncat(buffer2, (char*) current->data, sizeof(buffer2));
+                current = current->next;
+            }
+            n = write(user[tc].sockfd, buffer2, sizeof(buffer2));
             if (n < 0) error("ERROR writing to socket");
+            print_user_list(user_list);
         }
 
-        print_user_list(user_list); //print all users up to this point
-        pthread_create(&threads[tc], NULL, client_thread, &tc);
+        /// read the names of the target recepients
+        while (1) 
+        {
+            bzero(buffer,sizeof(buffer));
+            n = read(user[tc].sockfd, buffer, sizeof(buffer));
+            if (n < 0) error("ERROR reading from socket");
+            
+            char* usr = strtok(buffer, ";");
+
+            while (usr!=NULL)
+            {
+                dbllist_append(res_list, usr);
+                usr = strtok(NULL, ";");
+            }
+
+            /// find the recepient clients
+            current = user_list->head;
+            rcurrent = res_list->head;
+            while (current!=NULL)
+            {
+                if (memcmp(current->data, buffer, sizeof(buffer))==0)
+                {
+                    while (rcurrent!=NULL)
+                    {
+                        dbllist_node_t* node = rcurrent;
+                        while (memcmp(current->data, node->data, 32!=0))
+                        {
+                            node = node->next;
+                        }
+                        if (node==NULL)
+                        {
+                            dbllist_remove(res_list, rcurrent, 0);
+                        }
+                        rcurrent = rcurrent->next;
+                    }
+
+                    n = write(user[tc].sockfd, "\nConnection established, you can start chatting.\n", sizeof(buffer));
+                    if (n < 0) error("ERROR writing to socket");
+                    break;
+                    
+                    for (rcurrent = res_list->head; rcurrent!=NULL; rcurrent = rcurrent->next)
+                    {
+                        //place talking to other clients here
+                    }
+                }
+                current = current->next;
+            }
+            if (current==NULL)
+            {
+                n = write(user[tc].sockfd, "\nDo(es) not exist, do you want to try another user/s? (y/n)\n", sizeof(buffer));
+                if (n < 0) error("ERROR writing to socket");
+
+                bzero(buffer,sizeof(buffer));
+                n = read(user[tc].sockfd, buffer, sizeof(buffer));
+                if (n < 0) error("ERROR reading from socket");
+                if ((buffer[0]=='n') || (buffer[0]=='N')) break;
+
+            }
+            else break;
+        }
+        printf("All the connected users to this point ... \n");
+        print_user_list(user_list); //print on screen all the logged users up to this time
+        //pthread_create(&threads[tc], NULL, client_thread, &tc);
         tc++;
     }
 
     /** end program routines */
     for (tc=0; tc<THREADS_MAX; tc++)
     {
-        pthread_join (threads[tc], NULL);
+        //pthread_join (threads[tc], NULL);
         // removes the user from the list
         int i=0;
         dbllist_node_t* current = user_list->head;
@@ -171,37 +195,35 @@ int main(int argc, char *argv[])
             i++;
         }
     }
-
     pthread_mutex_destroy(&mutex);
 
     for (tc=0; tc<THREADS_MAX; tc++)
     {
-        close(newsockfd[tc]);
+        close(user[tc].sockfd);
     }
 
     close(sockfd);
-    // changing the 0 to 1 will cause a world of pain
     dbllist_destroy(user_list, 0);
+    dbllist_destroy(res_list, 0);
     printf("closing server, goodbye!\n");
 
     return 0;
 }
 
-// thread routine
-void* client_thread(void* tc)
-{
-    int user_c = *(int*) tc;
+// the thread routine/function
+void* client_thread(void* tc) {
+    int ttc = *(int*) tc;
     int n;
 
     // critical section
     pthread_mutex_lock(&mutex);
     while (1)
     {
-        printf("=== in thread %d ===\n", user_c);
+        printf("=== in thread %d ===\n", ttc);
 
         // read
         bzero(buffer,sizeof(buffer));
-        n = read(newsockfd[user_c], buffer, sizeof(buffer));
+        n = read(user[ttc].sockfd, buffer, sizeof(buffer));
         if (n < 0)
         {
             fprintf(stderr, "ERROR reading from socket\n");
@@ -214,9 +236,9 @@ void* client_thread(void* tc)
             break;
         }
         // write
-        //bzero(buffer,sizeof(buffer));
-        //fgets(buffer,sizeof(buffer)-1,stdin);
-        n = write(newsockfd[user_c], buffer, sizeof(buffer));
+        bzero(buffer,sizeof(buffer));
+        fgets(buffer,sizeof(buffer)-1,stdin);
+        n = write(user[ttc].sockfd, buffer, sizeof(buffer));
         if (n < 0)
         {
             fprintf(stderr, "ERROR writing to socket\n");
@@ -239,7 +261,7 @@ void print_user_list(dbllist_t* list) {
         printf("*\t Online users:\n");
         while (current!=NULL)
         {
-            printf("*\t %d. %s", i, (char*) current->data);
+            printf("*\t %d. %s", i, ((user_t*) current->data)->name);
             current = current->next;
             i++;
         }
