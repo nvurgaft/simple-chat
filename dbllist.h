@@ -3,7 +3,7 @@
 
   @file
 
-  @brief Implementation of a very simple single linked list.
+  @brief Implementation of a very simple doubly linked list.
 
 */
 

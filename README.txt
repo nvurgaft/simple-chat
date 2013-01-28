@@ -2,8 +2,8 @@
 | Koby Vurgaft	id: 303829063	login: kobyvo	email: slipperygate@gmail.com      |
 +----------------------------------------------------------------------------------+
 
-                    Project 2: Multithreaded client-server chat program
-                    ---------------------------------------------------
+                    Project 3: Multithreaded client-server chat program FINAL
+                    ---------------------------------------------------------
   
 
 Submitted Files
@@ -28,7 +28,17 @@ server, when accepted it connects to other clients connected to the server and s
 with it.
 
 
+How to use
+----------
+
+You should first start the server side application, do this by typing "./server" followed by the port 
+number the server should work on, ie, "./server 5000".
+Then start a client by typing "./client" followed by the host name andthe port number of the target server, 
+ie "./client hostname 5000".
+
+
 Remarks
 ------------
 
-The client program will exit if a user types 'exit', it's corresponding server thread would end too.
+1. The client program will exit if a user types 'exit', it's corresponding server thread would end too.
+2. The program won't handle the event of an invalid port number.
