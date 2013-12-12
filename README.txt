@@ -1,12 +1,11 @@
-+----------------------------------------------------------------------------------+
-| Koby Vurgaft	id: 303829063	login: kobyvo	email: slipperygate@gmail.com      |
-+----------------------------------------------------------------------------------+
++---------------------------------------------------------------------------------+
+| written bynvurgaft                                                              |
++---------------------------------------------------------------------------------+
 
-                    Project 3: Multithreaded client-server chat program FINAL
-                    ---------------------------------------------------------
-  
+                    Multithreaded client-server chat program FINAL
+                    ----------------------------------------------
 
-Submitted Files
+Files
 ---------------
 
 client.c - the client side for the chat application
@@ -21,11 +20,11 @@ MAKEFILE - compile file for this project (in terminal run 'make' to compile)
 Brief Details
 -------------
 
-A 2-part implementation for a multithreaded chat application, this project is devided into two(2) 
-parts, the client side and the server side.
-the client (alone or with more other identicle clients) attempts to establish a connectiong with the
-server, when accepted it connects to other clients connected to the server and startes communication
-with it.
+An attempt to write a multithreaded (POSIX), multi user, CLI chat server and client application under linux with C
+1. this version is still uncomplete!!!
+2. multiple users can connect but they only can discuss with the server, future code will resolve this so they could
+converse with eachother
+3. conversation is still uncomplete and blocking
 
 
 How to use
@@ -34,11 +33,15 @@ How to use
 You should first start the server side application, do this by typing "./server" followed by the port 
 number the server should work on, ie, "./server 5000".
 Then start a client by typing "./client" followed by the host name andthe port number of the target server, 
-ie "./client hostname 5000".
+ie "./client hostname 5000" (the only hostname currently supported is plain 'hostname')
 
+Compiling
+---------
+
+You can use the makefile attached to compile a copy of both client and server executabes
 
 Remarks
 ------------
 
-1. The client program will exit if a user types 'exit', it's corresponding server thread would end too.
+1. Currently the conversation loops are unbreakable and exit is ony possible with ctrl+C
 2. The program won't handle the event of an invalid port number.
