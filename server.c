@@ -9,7 +9,8 @@ int portno;
 dbllist_t* user_list;
 
 // signatures
-void talk_routine(void*);
+void read_routine(void*);
+void write_routine(void*);
 void displayUsers(dbllist_t*);
 void removeUser(dbllist_t*, char*);
 
@@ -83,7 +84,7 @@ int main(int argc, char* argv[])
 
 			dbllist_node_t* current = user_list->head;
 			while (current!=NULL) {		
-				printf("comparing %s to %s", current->data, buff);
+				printf("comparing %s to %s", ((char*) ((user_t*) current->data)->name), buff);
 				if (strcmp(current->data, buff)==0) {
 					if ((nbytes = write(newfd, "Username already exists, try again\n", 36)) < 0) {
 						error("Error on Write (server side - validating user name)\n");
@@ -125,7 +126,8 @@ int main(int argc, char* argv[])
 				if ((nbytes = write(newfd, buffer, sizeof(buffer))) < 0) {
 					error("Error on Write (server side - validating user name)\n");
 				}
-				pthread_create(&new_user->thread, NULL, (void*) talk_routine, (void*) new_user);
+				pthread_create(&new_user->thread[0], NULL, (void*) read_routine, (void*) new_user);
+				pthread_create(&new_user->thread[1], NULL, (void*) write_routine, (void*) new_user);
 
 				break;
 			}
@@ -143,7 +145,7 @@ int main(int argc, char* argv[])
 // 	*	thread function		*
 //	*************************
 // the discussion between users happens here
-void talk_routine(void* param) {
+void read_routine(void* param) {
 
 	user_t* user = (user_t*) param;
 
@@ -159,6 +161,19 @@ void talk_routine(void* param) {
 			error("Error on Read (server side - loop)");
 		}
 		puts(buff);
+	}
+	pthread_exit(0);
+}
+void write_routine(void* param) {
+
+	user_t* user = (user_t*) param;
+
+	char buff[1024];
+	int nbytes;
+
+	bzero(buff, sizeof(buff));
+	
+	while (true) {
 
 		// write to client
 		fgets(buff, sizeof(buff), stdin);
@@ -192,7 +207,8 @@ void removeUser(dbllist_t* ulist, char* uname) {
 	while (current!=NULL) {
 		if (((user_t*) current->data)->name == uname) {
 			// join his thread
-			pthread_join(((user_t*) current->data)->thread, NULL);
+			pthread_join(((user_t*) current->data)->thread[0], NULL);
+			pthread_join(((user_t*) current->data)->thread[1], NULL);
 			// remove him from list
 			dbllist_remove(ulist, current, 1);
 			printf("user %s was removed from chat\n", uname);
